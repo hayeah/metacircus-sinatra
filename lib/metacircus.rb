@@ -33,9 +33,17 @@ class Metacircus::Site
     end
   end
 
-  def atom_feed
-    
-  end
+  # def atom_feed
+  #   updated_time = Time.now
+  #   [:feed,:'xmlns' => "http://www.w3.org/2005/Atom"
+  #    [:title,"Metacircus"],
+  #    [:link,{:href => "http://www.metacircus.com/atom.xml", :rel => "self"}],
+  #    [:link,{:href => "http://www.metacircus.com"}],
+  #    [:updated,updated_time],
+  #    [:id,"http://www.metacircus.com/"],
+  #    [:author,nil,[[:name,nil,"Howard Yeh"],[:email,nil,"hayeah@gmail.com"]]]
+  #   ]
+  # end
 
   def index
     @index ||= @repo.layout(@repo.index)
