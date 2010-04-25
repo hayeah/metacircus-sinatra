@@ -3,7 +3,7 @@ require 'sinatra'
 
 require 'lib/metacircus'
 
-blog = Metacircus::Repo.new("repo")
+blog = Metacircus("repo")
 
 set :public, 'repo/static'
 
@@ -14,3 +14,4 @@ end
 get '/post/:name' do
   blog.post(params[:name]).to_xml
 end
+

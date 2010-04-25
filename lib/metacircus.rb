@@ -1,5 +1,39 @@
 class Metacircus
+end
+
+def Metacircus(repo_path)
+  site = Metacircus::Site.new(Metacircus::Repo.new(repo_path))
+  site.cache_all
+  site
+end
+
+class Metacircus::Site
+  # sitemap with caching
+  def initialize(repo)
+    @repo = repo
+  end
+
+  def cache_all
+    posts
+    index
+    true
+  end
+
+  def post(name)
+    posts[name]
+  end
   
+  def posts
+    @posts ||= @repo.posts.inject({}) { |h,(name,post)|
+      p [:generate,name]
+      h[name] = @repo.post(name)
+      h
+    }
+  end
+
+  def index
+    @index ||= @repo.index
+  end
 end
 
 class Metacircus::Repo
