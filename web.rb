@@ -1,6 +1,8 @@
 require 'rubygems'
 require 'sinatra'
 
+require 'newrelic_rpm'
+
 require 'lib/metacircus'
 
 blog = Metacircus("repo")

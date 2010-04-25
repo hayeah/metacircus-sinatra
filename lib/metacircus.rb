@@ -13,6 +13,7 @@ class Metacircus::Site
     @repo = repo
   end
 
+  # build more sophisticated caching behaviour here...
   def cache_all
     posts
     index
@@ -20,19 +21,24 @@ class Metacircus::Site
   end
 
   def post(name)
-    posts[name]
+    raise "post not found" unless post = posts[name]
+    post
   end
   
   def posts
-    @posts ||= @repo.posts.inject({}) { |h,(name,post)|
-      p [:generate,name]
-      h[name] = @repo.post(name)
+    # pp @repo.posts
+    @posts ||= @repo.posts.inject({}) do |h,(name,document)|
+      h[name] = @repo.layout(document)
       h
-    }
+    end
+  end
+
+  def atom_feed
+    
   end
 
   def index
-    @index ||= @repo.index
+    @index ||= @repo.layout(@repo.index)
   end
 end
 
@@ -40,42 +46,13 @@ class Metacircus::Repo
   require 'grit'
   require 'curly'
 
-  attr_reader :repo
-  def initialize(repo)
-    @repo = Grit::Repo.new(repo)
+  attr_reader :git
+  def initialize(git)
+    @git = Grit::Repo.new(git)
   end
 
   def post(name)
-    post = posts[name]
-    raise "post not found" unless post
-    post.process
-    # add disqus
-    disqus = pages["disqus"]
-    disqus.dom.at("disqus_hook").replace(Curly.node("{a[href http://www.metacircus.com/post/#{post.name}#disqus_thread]Comments}"))
-    post.dom.add_child(disqus.dom)
-    
-    layout = self.layout["default"]
-    layout.dom.at("content").replace(post.dom)
-    layout.dom.at("title").content = "#{post.title} - Metacircus"
-    layout
-  end
-
-  def posts
-    blobs("post") { |blob|
-      Metacircus::Document::Post.new(blob)
-    }
-  end
-
-  def pages
-    blobs("page") { |blob|
-      Metacircus::Document::Page.new(blob)
-    }
-  end
-
-  def layout
-    blobs("layout") { |blob|
-      Metacircus::Document::Layout.new(blob)
-    }
+    posts[name]
   end
 
   def index
@@ -86,15 +63,53 @@ class Metacircus::Repo
       li = Curly.node("{li {span #{post.created_time.strftime("%d %b %Y")}} » {a[href post/#{post.name}] #{post.title}}}")
       ul.add_child(li)
     }
+    index
+  end
 
-    layout = self.layout["default"]
-    layout.dom.at("content").replace(index.dom)
+  def posts
+    @posts ||= blobs("post") { |blob|
+      post = Metacircus::Document::Post.new(blob)
+      p [:process,post.name]
+      post.process
+      # add disqus
+      disqus = pages["disqus"]
+      disqus.dom.at("disqus_hook").replace(Curly.node("{a[href http://www.metacircus.com/post/#{post.name}#disqus_thread]Comments}"))
+      post.dom.add_child(disqus.dom)
+      post
+    }
+  end
+
+  def pages
+    blobs("page") { |blob|
+      Metacircus::Document::Page.new(blob)
+    }
+  end
+
+  def layouts
+    blobs("layout") { |blob|
+      Metacircus::Document::Layout.new(blob)
+    }
+  end
+
+  def layout(document,name="default")
+    layout = layouts[name].dom.clone
+    # set title
+    layout.at("title").content = document.dom["title"]
+    # make a content div to put content
+    div = Curly.node("{div.content}")
+    content = document.dom.clone
+    
+    content.children.each { |child|
+      div.add_child(child)
+    }
+    # set layout's content
+    layout.at("content").replace(div)
     layout
   end
-  
+
   protected
   def blobs(dir)
-    (repo.tree / dir).contents.inject({}) { |h,blob|
+    (git.tree / dir).contents.inject({}) { |h,blob|
       h[blob.name] = block_given? ? yield(blob) : blob
       h
     }
@@ -178,32 +193,25 @@ class Metacircus::Document::Post < Metacircus::Document
   end
 
   def process
-    div = Nokogiri.make("<div></div>")
-    dom.children.each do |node|
-      div.add_child node
-    end
-
     ##################################################
     # transform
-    (div / "prog").each do |node|
+    (dom / "prog").each do |node|
       pygmentize(node,node["l"] || node["language"])
     end
 
-    (div / "ruby").each do |node|
+    (dom / "ruby").each do |node|
       pygmentize(node,"ruby")
     end
 
     ##################################################
     # markdown
-    (div / "md").each do |node|
+    (dom / "md").each do |node|
       md = markdown(node.content)
       # DocumentFragment causes double freed pointer error
       #Nokogiri::XML::DocumentFragment.parse(md)
       frag = Nokogiri::XML::Document.parse("<div>#{md}</div>").root
       node.replace(frag)
     end
-    
-    @dom = div
   end
 
   protected

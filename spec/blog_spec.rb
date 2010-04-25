@@ -9,6 +9,20 @@ describe "Blog" do
     Metacircus::Repo.new("repo")
   }
 
+  let(:site) {
+    Metacircus::Site.new(repo)
+  }
+
+  it "layouts" do
+    # puts repo.layout(repo.index).id
+    # puts repo.layout(repo.index).id
+    # puts repo.layout(repo.post("rant-lovely")).id
+
+    #puts repo.layout(repo.post("rant-lovely")).to_xml
+    p site.post("rant-lovely").id
+    p site.post("long-day-ended-with-c").id
+  end
+
   it "shows post" do
     # pp repo.posts
     # pp repo.pages
