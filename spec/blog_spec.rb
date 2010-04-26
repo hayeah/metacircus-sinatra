@@ -13,6 +13,10 @@ describe "Blog" do
     Metacircus::Site.new(repo)
   }
 
+  it "builds atom feed" do
+    puts site.atom_feed
+  end
+
   it "layouts" do
     # puts repo.layout(repo.index).id
     # puts repo.layout(repo.index).id

@@ -1,3 +1,4 @@
+require 'time'
 class Metacircus
 end
 
@@ -32,18 +33,32 @@ class Metacircus::Site
       h
     end
   end
-
-  # def atom_feed
-  #   updated_time = Time.now
-  #   [:feed,:'xmlns' => "http://www.w3.org/2005/Atom"
-  #    [:title,"Metacircus"],
-  #    [:link,{:href => "http://www.metacircus.com/atom.xml", :rel => "self"}],
-  #    [:link,{:href => "http://www.metacircus.com"}],
-  #    [:updated,updated_time],
-  #    [:id,"http://www.metacircus.com/"],
-  #    [:author,nil,[[:name,nil,"Howard Yeh"],[:email,nil,"hayeah@gmail.com"]]]
-  #   ]
-  # end
+  
+  def atom_feed
+    posts = @repo.posts.values.sort { |p1,p2|
+      p2.created_time <=> p1.created_time
+    }
+    entries = posts.map { |post|
+      [:entry,nil,
+       [[:title,nil,post.title],
+        [:link,{:href => "http://www.metacircus.com/post#{post.name}"}],
+        [:updated,nil,post.updated_time.xmlschema],
+        [:id,nil,"http://www.metacircus.com/post#{post.name}"],
+        [:content,{:type => "html"},post.to_xml]]]
+    }
+    feed = [:feed,{:'xmlns' => "http://www.w3.org/2005/Atom"},
+            [[:title,nil,"Metacircus"],
+             [:link,{:href => "http://www.metacircus.com/atom.xml", :rel => "self"}],
+             [:link,{:href => "http://www.metacircus.com"}],
+             [:updated,nil,[posts.first.updated_time]],
+             [:id,nil,"http://www.metacircus.com/"],
+             [:author,nil,
+              [:name,nil,"Howard Yeh"],
+              [:email,nil,"hayeah@gmail.com"]],
+             *entries]]
+    pp feed
+    Curly::XML::Builder.xml(feed).to_xml
+  end
 
   def index
     @index ||= @repo.layout(@repo.index)
@@ -67,7 +82,10 @@ class Metacircus::Repo
     index = pages["index"]
 
     ul = index.dom.at("#hacks")
-    posts.values.each { |post|
+    posts = self.posts.values.sort { |p1,p2|
+      p1.created_time <=> p2.created_time
+    }.reverse
+    posts.each { |post|
       li = Curly.node("{li {span #{post.created_time.strftime("%d %b %Y")}} » {a[href post/#{post.name}] #{post.title}}}")
       ul.add_child(li)
     }
@@ -201,6 +219,11 @@ class Metacircus::Document::Post < Metacircus::Document
   end
 
   def process
+    div = Curly.node("{div}")
+    dom.children.each do |child|
+      div << child
+    end
+    @dom = div
     ##################################################
     # transform
     (dom / "prog").each do |node|
