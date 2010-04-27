@@ -13,6 +13,10 @@ get '/' do
   blog.index.to_xml
 end
 
+get '/atom.xml' do
+  blog.atom_feed.to_xml
+end
+
 get '/post/:name' do
   blog.post(params[:name]).to_xml
 end

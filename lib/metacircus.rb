@@ -41,9 +41,9 @@ class Metacircus::Site
     entries = posts.map { |post|
       [:entry,nil,
        [[:title,nil,post.title],
-        [:link,{:href => "http://www.metacircus.com/post#{post.name}"}],
+        [:link,{:href => "http://www.metacircus.com/post/#{post.name}"}],
         [:updated,nil,post.updated_time.xmlschema],
-        [:id,nil,"http://www.metacircus.com/post#{post.name}"],
+        [:id,nil,"http://www.metacircus.com/post/#{post.name}"],
         [:content,{:type => "html"},post.to_xml]]]
     }
     feed = [:feed,{:'xmlns' => "http://www.w3.org/2005/Atom"},
@@ -56,8 +56,7 @@ class Metacircus::Site
               [:name,nil,"Howard Yeh"],
               [:email,nil,"hayeah@gmail.com"]],
              *entries]]
-    pp feed
-    Curly::XML::Builder.xml(feed).to_xml
+    Curly::XML::Builder.xml(feed)
   end
 
   def index
